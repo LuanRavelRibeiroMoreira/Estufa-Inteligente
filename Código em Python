@@ -1,0 +1,197 @@
+import time
+
+# Classes Sensor, Atuador e Gerenciador
+class Sensor:
+    def __init__(self, id_sensor, tipo_sensor):
+        self.id_sensor = id_sensor
+        self.tipo_sensor = tipo_sensor
+        self.valor = None
+
+    def conectar(self, gerenciador):
+        print(f"[Sensor {self.id_sensor}]: Conectando ao Gerenciador...")
+        time.sleep(0.1)
+        gerenciador.registrar_sensor(self)
+        print(f"[Sensor {self.id_sensor}]: Conectado com sucesso.")
+        time.sleep(0.1)
+
+    def definir_valor(self, valor):
+        self.valor = valor
+
+    def ler_valor(self):
+        return self.valor
+
+    def enviar_valor(self, gerenciador):
+        valor = self.ler_valor()
+        print(f"[Sensor {self.id_sensor}]: Enviando valor {valor} para o Gerenciador.")
+        time.sleep(0.1)
+        gerenciador.receber_dados_sensor(self.id_sensor, valor)
+
+
+class Atuador:
+    def __init__(self, id_atuador, tipo_atuador):
+        self.id_atuador = id_atuador
+        self.tipo_atuador = tipo_atuador
+        self.estado = "desligado"
+
+    def conectar(self, gerenciador):
+        print(f"[Atuador {self.id_atuador}]: Conectando ao Gerenciador...")
+        time.sleep(0.1)
+        gerenciador.registrar_atuador(self)
+        print(f"[Atuador {self.id_atuador}]: Conectado com sucesso.")
+        time.sleep(0.1)
+
+    def ligar(self):
+        self.estado = "ligado"
+        print(f"[Atuador {self.id_atuador}]: Ligado.")
+        time.sleep(0.1)
+
+    def desligar(self):
+        self.estado = "desligado"
+        print(f"[Atuador {self.id_atuador}]: Desligado.")
+        time.sleep(0.1)
+
+
+class Gerenciador:
+    def __init__(self):
+        self.sensores = {}
+        self.atuadores = {}
+        self.valores_sensores = {}
+        self.limites = {
+            "temperatura": (18.0, 25.0),
+            "umidade": (40.0, 70.0),
+            "co2": (350, 600)
+        }
+
+    def registrar_sensor(self, sensor):
+        self.sensores[sensor.id_sensor] = sensor
+        self.valores_sensores[sensor.id_sensor] = None
+        print(f"[Gerenciador]: Sensor {sensor.id_sensor} ({sensor.tipo_sensor}) registrado.")
+        time.sleep(0.1)
+
+    def registrar_atuador(self, atuador):
+        self.atuadores[atuador.id_atuador] = atuador
+        print(f"[Gerenciador]: Atuador {atuador.id_atuador} ({atuador.tipo_atuador}) registrado.")
+        time.sleep(0.1)
+
+    def receber_dados_sensor(self, id_sensor, valor):
+        self.valores_sensores[id_sensor] = valor
+        print(f"[Gerenciador]: Recebido valor {valor} do Sensor {id_sensor}.")
+        time.sleep(0.1)
+        self.verificar_condicoes(id_sensor)
+
+    def verificar_condicoes(self, id_sensor):
+        tipo_sensor = self.sensores[id_sensor].tipo_sensor
+        valor = self.valores_sensores[id_sensor]
+
+        print(f"[Gerenciador]: Verificando condições para o Sensor {id_sensor} ({tipo_sensor})...")
+        time.sleep(0.1)
+
+        lower_limit, upper_limit = self.limites[tipo_sensor]
+        
+        if tipo_sensor == "temperatura":
+            if valor < lower_limit:
+                print(f"[Gerenciador]: Temperatura baixa detectada ({valor}°C). Ligando aquecedor...")
+                self.atuadores["aquecedor"].ligar()
+                self.atuadores["resfriador"].desligar()
+            elif valor > upper_limit:
+                print(f"[Gerenciador]: Temperatura alta detectada ({valor}°C). Ligando resfriador...")
+                self.atuadores["aquecedor"].desligar()
+                self.atuadores["resfriador"].ligar()
+            else:
+                print(f"[Gerenciador]: Temperatura dentro do intervalo ideal ({valor}°C).")
+                self.atuadores["aquecedor"].desligar()
+                self.atuadores["resfriador"].desligar()
+        elif tipo_sensor == "umidade":
+            if valor < lower_limit:
+                print(f"[Gerenciador]: Umidade baixa detectada ({valor}%). Ligando irrigação...")
+                self.atuadores["irrigacao"].ligar()
+            else:
+                print(f"[Gerenciador]: Umidade dentro do intervalo ideal ({valor}%).")
+                self.atuadores["irrigacao"].desligar()
+        elif tipo_sensor == "co2":
+            if valor < lower_limit:
+                print(f"[Gerenciador]: Nível de CO2 baixo detectado ({valor} ppm). Ligando injetor de CO2...")
+                self.atuadores["injetor_co2"].ligar()
+            else:
+                print(f"[Gerenciador]: Nível de CO2 dentro do intervalo ideal ({valor} ppm).")
+                self.atuadores["injetor_co2"].desligar()
+
+    def obter_dados_sensor(self, id_sensor):
+        print(f"[Gerenciador]: Enviando dados do Sensor {id_sensor} para o Cliente.")
+        time.sleep(0.1)
+        return self.valores_sensores.get(id_sensor)
+
+
+class Cliente:
+    def __init__(self, gerenciador):
+        self.gerenciador = gerenciador
+
+    def solicitar_dados_sensor(self, id_sensor):
+        print(f"[Cliente]: Requisitando dados do Sensor {id_sensor} ao Gerenciador...")
+        time.sleep(0.1)
+        valor = self.gerenciador.obter_dados_sensor(id_sensor)
+        print(f"[Cliente]: Recebido valor {valor} do Sensor {id_sensor}.")
+        return valor
+
+    def configurar_limites(self, intervalo_temperatura, intervalo_umidade, intervalo_co2):
+        print(f"[Cliente]: Configurações definidas - Temperatura: {intervalo_temperatura}, Umidade: {intervalo_umidade}, CO2: {intervalo_co2}.")
+        time.sleep(0.1)
+        self.gerenciador.limites["temperatura"] = intervalo_temperatura
+        self.gerenciador.limites["umidade"] = intervalo_umidade
+        self.gerenciador.limites["co2"] = intervalo_co2
+
+
+# Código principal
+def main():
+    # Criando instâncias do Gerenciador, Sensores, Atuadores e Cliente
+    gerenciador = Gerenciador()
+
+    # Criando e conectando sensores
+    sensor_temp = Sensor("sensor_temp_1", "temperatura")
+    sensor_umidade = Sensor("sensor_umidade_1", "umidade")
+    sensor_co2 = Sensor("sensor_co2_1", "co2")
+
+    sensor_temp.conectar(gerenciador)
+    sensor_umidade.conectar(gerenciador)
+    sensor_co2.conectar(gerenciador)
+
+    # Criando e conectando atuadores
+    aquecedor = Atuador("aquecedor", "aquecedor")
+    resfriador = Atuador("resfriador", "resfriador")
+    irrigacao = Atuador("irrigacao", "irrigacao")
+    injetor_co2 = Atuador("injetor_co2", "injetor_co2")
+
+    aquecedor.conectar(gerenciador)
+    resfriador.conectar(gerenciador)
+    irrigacao.conectar(gerenciador)
+    injetor_co2.conectar(gerenciador)
+
+    # Criando um cliente
+    cliente = Cliente(gerenciador)
+
+    # Cliente configurando os parâmetros da estufa
+    cliente.configurar_limites((20.0, 24.0), (45.0, 65.0), (400, 500))
+
+    # Solicitar os valores dos sensores no início
+    print("Digite os valores iniciais dos sensores:")
+    valor_temp = float(input("Valor da temperatura (em °C): "))
+    valor_umidade = float(input("Valor da umidade (em %): "))
+    valor_co2 = float(input("Valor do CO2 (em ppm): "))
+
+    sensor_temp.definir_valor(valor_temp)
+    sensor_umidade.definir_valor(valor_umidade)
+    sensor_co2.definir_valor(valor_co2)
+
+    # Simulando leituras e controle
+    for _ in range(5):  # Simula 5 ciclos de leitura
+        sensor_temp.enviar_valor(gerenciador)
+        sensor_umidade.enviar_valor(gerenciador)
+        sensor_co2.enviar_valor(gerenciador)
+        time.sleep(1)
+
+    # Cliente fazendo uma requisição
+    cliente.solicitar_dados_sensor("sensor_temp_1")
+
+# Executa o código principal
+if __name__ == "__main__":
+    main()
